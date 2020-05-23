@@ -55,9 +55,7 @@ class ParserHHVacancy:
                 else:
                     if re.findall('от', price_data[0]):
                         min_value = re.findall('\d+', price_data[0])[0]
-                        max_value = None
                     elif re.findall('до', price_data[0]):
-                        min_value = None
                         max_value = re.findall('\d+', price_data[0])[0]
 
         except Exception as ex:
