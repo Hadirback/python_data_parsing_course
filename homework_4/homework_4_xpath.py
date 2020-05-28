@@ -83,28 +83,31 @@ class YandexNewsParse():
     def get_yandex_news(self):
 
         dom = ResponseData.get_response_dom(self.link_yandex + "/news")
-        main_news_dom = dom.xpath("//div[@class='stories-set__main-item']//div[@class='story__topic'] | "
-                                  "//table[@class='stories-set__items']//div[@class='story__topic']")
+        main_news_dom = dom.xpath("//table[@class='stories-set__items']//td[@class='stories-set__item'] |"
+                                  "//div[@class='stories-set__main-item']//div[@class='story__content']")
 
         length = len(main_news_dom)
 
-        for i in range(0, length - 1):
-            story_info = main_news_dom[i].xpath("//div[@class='story__info']/div/text()")[0]
-
-            if not story_info:
-                continue
-
+        for news in main_news_dom:
             dict = {}
 
-            link = main_news_dom[i].xpath("//div[@class='story__topic']//h2[@class='story__title']//a/@href")[0]
-            dict['link'] = self.link_yandex + link
-            dict['headers'] = main_news_dom[i].xpath("//div[@class='story__topic']//h2[@class='story__title']//a/text()")[0]
+            link = news.xpath(".//div[@class='story__topic']//h2[@class='story__title']//a/@href")
+            if len(link) > 0:
+                dict['link'] = self.link_yandex + link[0]
+            else:
+                continue
 
-            time = re.findall("\d{2}\:\d{2}$", story_info)[0]
+            headers = news.xpath(".//div[@class='story__topic']//h2[@class='story__title']//a/text()")
+            if len(headers):
+                dict['headers'] = headers[0]
 
-            date = strftime("%Y-%m-%d", gmtime())
-            dict['datetime'] = f'{date} {time}'
-            dict['source'] = re.findall("([\w\s\d\.]*) \d{2}\:\d{2}$", story_info)[0]
+            story_info = news.xpath('.//div[@class="story__info"]/div/text()')
+
+            if len(story_info) > 0:
+                time = re.findall("\d{2}\:\d{2}$", story_info[0])[0]
+                date = strftime("%Y-%m-%d", gmtime())
+                dict['datetime'] = f'{date} {time}'
+                dict['source'] = re.findall("([\w\s\d\.]*) \d{2}\:\d{2}$", story_info[0])[0]
 
             self.news.update_one({'link': dict['link']},
                                  {'$set': dict}, upsert=True)
