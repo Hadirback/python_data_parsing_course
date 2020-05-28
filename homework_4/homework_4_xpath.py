@@ -46,11 +46,11 @@ class MailNewsParse():
             if not news_dom:
                 return
 
-            source = news_dom.xpath("//div[@class='breadcrumbs breadcrumbs_article js-ago-wrapper']"
+            source = news_dom.xpath(".//div[@class='breadcrumbs breadcrumbs_article js-ago-wrapper']"
                                 "//a[@class='link color_gray breadcrumbs__link']/span/text()")
-            headers = news_dom.xpath("//div[@class='hdr hdr_collapse hdr_bold_huge hdr_lowercase meta-speakable-title']"
+            headers = news_dom.xpath(".//div[@class='hdr hdr_collapse hdr_bold_huge hdr_lowercase meta-speakable-title']"
                                 "//h1/text()")
-            date = news_dom.xpath("//div[@class='breadcrumbs breadcrumbs_article js-ago-wrapper']"
+            date = news_dom.xpath(".//div[@class='breadcrumbs breadcrumbs_article js-ago-wrapper']"
                                "//span[@class='note__text breadcrumbs__text js-ago']/@datetime")
             dict = {}
 
@@ -63,30 +63,79 @@ class MailNewsParse():
             if len(date) > 0:
                 dict['date'] = date
 
-            self.news.update_one({'link': dict['link']},
-                                        {'$set': dict}, upsert=True)
+            self.news.update_one({'link': dict['link']}, {'$set': dict}, upsert=True)
 
+    def show_data(self):
+        for item in self.news.find({}):
+            pprint(item)
 
 
 class LentaNewsParse():
 
     link_lenta = 'https://lenta.ru/'
 
-class YandexNewsParse():
+    def __init__(self):
+        db_news = DbInitializer()
+        self.news = db_news.get_collection('lenta_news')
 
+    def get_lenta_news(self):
+        dom = ResponseData.get_response_dom(self.link_lenta)
+        main_news_links = dom.xpath("//body/div[@id='root']/section[2]/div/div/div[1]/section[1]/div[1]/div |"
+                                    "//body/div[@id='root']/section[2]/div/div/div[1]/section[1]/div[2]/div")
+        for block in main_news_links:
+            link = None
+            header = None
+            datetime = None
+            dict = {}
+            h2 = block.xpath("./h2")
+
+            if len(h2) > 0:
+                link = h2[0].xpath("./a/@href")
+                header = h2[0].xpath("./a/text()")
+                datetime = h2[0].xpath("./a/@datetime")
+            else:
+                link = block.xpath("./a/@href")
+                header = block.xpath("./a/text()")
+                datetime = block.xpath("./a/@datetime")
+
+            if len(link) > 0:
+                dict['link'] = self.link_lenta + link[0]
+            else:
+                continue
+
+            if len(header) > 0:
+                dict['header'] = header[0]
+
+            if len (datetime) > 0:
+                dict['datetime'] = datetime[0]
+
+            self.news.update_one({'link': dict['link']}, {'$set': dict}, upsert=True)
+
+    def show_data(self):
+        for item in self.news.find({}):
+            pprint(item)
+
+
+class YandexNewsParse():
     link_yandex = 'https://yandex.ru'
 
     def __init__(self):
         db_news = DbInitializer()
         self.news = db_news.get_collection('yandex_news')
 
+    def split_story_info(self, story_info):
+        try:
+            time = re.findall("\d{2}\:\d{2}$", story_info[0])[0]
+            date = strftime("%Y-%m-%d", gmtime())
+            return f'{date} {time}', re.findall("([\w\s\d\.]*) \d{2}\:\d{2}$", story_info[0])[0]
+        except Exception as ex:
+            print('Exc in method split_story_info. Class YandexNewsParse', ex)
+
     def get_yandex_news(self):
 
         dom = ResponseData.get_response_dom(self.link_yandex + "/news")
         main_news_dom = dom.xpath("//table[@class='stories-set__items']//td[@class='stories-set__item'] |"
                                   "//div[@class='stories-set__main-item']//div[@class='story__content']")
-
-        length = len(main_news_dom)
 
         for news in main_news_dom:
             dict = {}
@@ -104,32 +153,26 @@ class YandexNewsParse():
             story_info = news.xpath('.//div[@class="story__info"]/div/text()')
 
             if len(story_info) > 0:
-                time = re.findall("\d{2}\:\d{2}$", story_info[0])[0]
-                date = strftime("%Y-%m-%d", gmtime())
-                dict['datetime'] = f'{date} {time}'
-                dict['source'] = re.findall("([\w\s\d\.]*) \d{2}\:\d{2}$", story_info[0])[0]
+                dict['datetime'], dict['source'] = self.split_story_info(story_info)
 
             self.news.update_one({'link': dict['link']},
                                  {'$set': dict}, upsert=True)
 
+    def show_data(self):
+        for item in self.news.find({}):
+            pprint(item)
+
 
 if __name__ == '__main__':
-    #main_news = MailNewsParse()
-    #main_news.get_mail_news()
+
+    main_news = MailNewsParse()
+    main_news.get_mail_news()
+    main_news.show_data()
 
     yandex_news = YandexNewsParse()
     yandex_news.get_yandex_news()
+    yandex_news.show_data()
 
-
-    db_news = DbInitializer()
-    #mail_news = db_news.get_collection('mail_news')
-
-
-
-    #for item in mail_news.find({}):
-    #    pprint(item)
-
-
-    yandex_news = db_news.get_collection('yandex_news')
-    for item in yandex_news.find({}):
-        pprint(item)
+    lenta_news = LentaNewsParse()
+    lenta_news.get_lenta_news()
+    lenta_news.show_data()
