@@ -30,6 +30,7 @@ class LabirintSpider(scrapy.Spider):
 
     def book_parse(self, response: HtmlResponse):
         name = response.xpath("//div[@id='product-title']/h1/text()").extract_first()
+        link = response.url
         authors = response.xpath("//div[@class='product-description']/div[@class='authors']/text()").extract()
         publisher = response.xpath("//div[@class='product-description']/div[@class='publisher']/a/text()").extract_first()
         price = response.xpath("//div[@class='product-description']/div[@class='buying']//span[@class='buying-price-val-number']/text()").extract_first()
@@ -37,4 +38,4 @@ class LabirintSpider(scrapy.Spider):
         rate = response.xpath("//div[@id='rate']/text()").extract_first()
         product_id = self.get_product_id(response.xpath("//div[@class='product-description']//div[@class='articul']/text()").extract_first())
 
-        yield BookparserItem(name=name, authors=authors, publisher=publisher, price=price, currency=currency, rate=rate, product_id=product_id)
+        yield BookparserItem(name=name, link=link, authors=authors, publisher=publisher, price=price, currency=currency, rate=rate, product_id=product_id)
