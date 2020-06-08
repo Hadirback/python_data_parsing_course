@@ -8,7 +8,7 @@ class LeroymerlinSpider(scrapy.Spider):
     allowed_domains = ['leroymerlin.ru']
 
     def __init__(self, product):
-        self.start_urls = [f'https://leroymerlin.ru/search/?q={product}suggest=true']
+        self.start_urls = [f'https://leroymerlin.ru/search/?q={product}']
 
     def parse(self, response):
         next_page = response.xpath("//div[@class='service-panel clearfix']"
@@ -27,12 +27,17 @@ class LeroymerlinSpider(scrapy.Spider):
         loader.add_xpath('_id', '//div[@class="product-detailed-page"]/@data-product-id')
         loader.add_xpath('name', '//h1[@slot="title"]/text()')
         loader.add_xpath('photo', '//picture/source[@media=" only screen and (min-width: 1024px)"]/@srcset')
-        loader.add_xpath('price', '//uc-pdp-price-view[@class="primary-price"]'
-                                  '/meta[@itemprop="price"]/@content')
+
+        loader.add_xpath('price', '//uc-pdp-price-view[@slot="primary-price"]'
+                                  '//meta[@itemprop="price"]/@content')
+
         loader.add_xpath('currency', '//uc-pdp-price-view[@class="primary-price"]'
                                      '/meta[@itemprop="priceCurrency"]/@content')
         loader.add_xpath('unit', '//uc-pdp-price-view[@class="primary-price"]'
                                  '/meta[@itemprop="availability"]/@content')
-        loader.add_xpath('characteristics', '//dl[@class="def-list"]/div[@class="def-list__group"]')
+
+        blocks = response.xpath('//dl[@class="def-list"]/div[@class="def-list__group"]')
+
+        loader.add_value('characteristics', blocks)
         loader.add_value('link', response.url)
         yield loader.load_item()
