@@ -1,4 +1,4 @@
-import re
+import re_test
 from pymongo import MongoClient
 from pprint import pprint
 from pycbrf.toolbox import ExchangeRates
