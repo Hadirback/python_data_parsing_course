@@ -141,6 +141,8 @@ class EmailParseSelenium:
             except Exception as ex:
                 print(ex)
 
+        self.driver.quit()
+
 
 if __name__ == '__main__':
     selenium_parser = EmailParseSelenium()
